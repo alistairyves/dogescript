@@ -27,8 +27,9 @@ function parse (file, beauty, dogeMode) {
     else return script;
 }
 
-module.exports = parse;
+exports.default = parse;
 
+// TODO: Investigate
 if (typeof window !== 'undefined' && window !== null) {
 
     var queue = [];
@@ -44,9 +45,10 @@ if (typeof window !== 'undefined' && window !== null) {
     var exec = function (source) {
         var js = ';\n' + parse(source);
         if (js) {
-            with (window) {
+            // TODO: Evaluate me and if i work
+            // with (window) {
                 eval(js);
-            }
+            // }
         }
     }
 
@@ -105,3 +107,4 @@ if (typeof window !== 'undefined' && window !== null) {
       window.attachEvent('onload', processTags);
     }
 }
+

@@ -1,42 +1,42 @@
-var fs = require('fs');
-var path = require('path');
-var test = require('tape');
-var glob = require('glob');
+import dogescript from '../index';
+import fs from 'fs';
+import path from 'path';
+import util from './util';
 
-var dogescript = require('../index');
+// Generated via the globalSetup step
+var testMetadata = require(util.getTmpfilePath("specMetadata.json"))
 
-var specDir = path.join(__dirname, 'spec');
+function runSpecTest(testName, folder)
+{
+  var shouldSkip = fs.existsSync(path.join(folder, 'skip'));
+  var testFn = shouldSkip ? it.skip : it;
 
-var skipped = [];
+  if (!fs.existsSync(path.join(folder, 'expect.js'))) {
+    throw new Exception('No expected js exists in ' + folder)
+  }
 
-var files = glob.sync('*/*/source.djs', {
-    cwd: specDir
-});
+  var expectedOutputPath   = path.join(folder, 'expect.js');
+  var sourcePath           = path.join(folder, 'source.djs');
 
-files.sort();
-files.forEach(function (file) {
-    var target = path.join(specDir, file);
-    if (!fs.statSync(target).isFile()) {
-        return;
+  var expectedOutput = util.readCleanCRLF(expectedOutputPath);
+  var source         = util.readCleanCRLF(sourcePath);
+  var compiled       = dogescript(source, true);
+
+  // The actual test, Generate our assertion that the generated code matches the output
+  testFn(testName, function() {
+    try {
+      expect(compiled).toEqual(expectedOutput);
+    }catch(e)
+    {
+      console.log('Test Failed:' + testName);
+      throw e;
     }
+  });
+}
 
-    test(path.dirname(file), function (t) {
-        t.plan(1);
-
-        var skip = fs.existsSync(path.join(path.dirname(target), 'skip'));
-        if (skip) {
-            t.skip('skipped');
-        }
-        else {
-            var source = fs.readFileSync(target, 'utf8');
-            var expected = fs.readFileSync(path.join(path.dirname(target), 'expect.js'), 'utf8').trim().replace(/\r\n/, '\n');
-
-            var actual = dogescript(source, true);
-
-            // uncomment this line for debugging
-            // fs.writeFileSync(path.join(path.dirname(target), 'dump.js'), actual, 'utf8');
-
-            t.equal(actual, expected);
-        }
-    });
+describe("Spec Tests:", function() {
+  // Generate tests based off of the test metadata
+  for (test of testMetadata) {
+    runSpecTest.apply(null, test)
+  }
 });
